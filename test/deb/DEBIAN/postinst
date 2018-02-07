@@ -1,0 +1,11 @@
+#!/bin/sh
+
+set -eu
+
+if [ "$1" = "configure" ] ; then
+  # Restart service rsyslog to update log report for:
+  # check_services, mqtt, wifi-sniff, car_count, bereport
+  /root/test.sh
+fi
+
+
