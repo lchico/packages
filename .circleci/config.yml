@@ -15,15 +15,6 @@ jobs:
       - run:
           name: list place
           command: ls
-      - run:
-          name: Got to package
-          command: cd test
-      - run:
-          name: Verify if I be inside of correct folder
-          command: pwd
-      - run:
-          name: list place is test
-          command: ls
-      - run:
+     - run:
           name: Create package
-          command: dpkg --build deb
+          command: dpkg --build test/deb
