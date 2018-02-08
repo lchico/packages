@@ -9,11 +9,18 @@ jobs:
       - run:
           name: Greeting
           command: echo Hello, world.
-          command: ls 
+      - run:
+          name: PWD
           command: pwd
       - run:
-          name: Go correct folder
-          command: cd test
+          name: list place
+          command: ls
+      - run:
+          name: Got to package
+          command: cd packages/test
+      - run:
+          name: Verify if I be inside of correct folder
+          command: pwd
       - run:
           name: Create package
           command: dpkg --build deb
