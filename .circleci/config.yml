@@ -1,0 +1,16 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/buildpack-deps
+        steps:
+          - checkout
+          - run:
+            name: Greeting
+            command: echo Hello, world.
+          - run:
+            name: Go correct folder
+            command: cd test
+          - run:
+            name: Create package
+            command: dpkg --build deb

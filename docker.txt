@@ -1,0 +1,328 @@
+===========================================================================
+===========================================================================
+DOCKER
+===========================================================================
+===========================================================================
+Conceptos:
+
+- IMAGES: 
+base para nuestro container. Nuestro container va a correr a partir de esa imagen. Se traen del Docker Hub.
+
+Para buscar una imagen:
+$ docker search <palabra clave>
+$ docker search ubuntu
+
+para bajarla:
+$ docker pull ubuntu
+
+Para ver las imagenes que tengo bajadas:
+$ docker images
+
+para eliminar una imagen:
+$ docker rmi <IMAGE ID>
+
+- CONTAINER: 
+Creado desde las imagenes, corren la aplicacion. Se crean usando docker run
+
+para ver todos los containers que estan corriendo:
+$ docker ps
+
+para ver todos los containers que corrimos (activos y no activos)
+$ docker ps -a
+
+levantar un container de docker y estar sobre el:
+$ docker run -it <docker_image> <command>
+ejemplo:
+$ docker run -it busybox sh
+el -it nos attachea a un tty interactivo en el container
+
+Si hago docker ps en mi compu despues de haber corrido eso (y no haber salido del container) me va a aparecer como que el container esta corriendo.
+
+Para eliminar containers:
+$ docker rm <CONTAINER_ID>
+
+Para eliminar todos los containers:
+docker rm $(docker ps -a -q -f status=exited)
+o:
+docker rm $(docker ps -a -q)
+-a => me devuelve todos
+-q => me devuelve los container_id
+
+-DOCKER DAEMON:
+Servicio que corre en el background
+
+- DOCKER HUB:
+Registro con todas las imagenes de Docker. Puedo bajar prexistentes y a partir de ahi crear mis imágenes, y despues pushearlas a Docker Hub.
+
+
+
+Correr un container de forma "detached" (para que no quede la consola en el container) y forwarear un puerto de mi pc con uno del container (toma puertos cualquiera)
+
+$ docker run -d -P --name <un_nombre_que_yo_quiera> <image_id|repository_name>
+Ejemplo:
+$ docker run -d -P --name container_prueba f01aab82
+
+y si quisiera ver estos puertos expuestos y matcheados:
+$ docker port <el_nombre_que_yo_quise>
+
+y para especificar que puerto tiene que exponer:
+$ docker run -d -p puerto_pc:puerto_container <image_id|repository_name>
+
+Luego, para parar ese container:
+$ docker stop <container_id>
+
+Y para parar todos los containers activos:
+$ docker stop $(docker ps -q)
+
+
+Algunos conceptos:
+
+Existen 2 tipos de imagenes:
+
+- Base Images: son imagenes que no tienen padre (es decir, no se hicieron a partir de ninguna imagen, como por ejemplo la imagen de ubuntu, debian, etc)
+- Child Images: imagenes que se crearon en base a una base image y se le agrego funcionalidad adicional (por ejemplo, una aplicacion de rails corriendo en un container de ubuntu)
+
+Ademas:
+- Official Images: son imagenes que son oficialmente mantenidas por capos de Docker. ej: ubuntu
+- User images: imagines creadas y compartidas por usuarios como yo. ej: jota/rails5
+
+
+Creacion de Child images: Con dockerfile.
+Ejemplo de Dockerfile:
+///////////////////////////////////////////////////////////////////////////////
+FROM node:6.9.1 // base image usada
+EXPOSE 8080 // puerto del container a exponer al exterior
+RUN mkdir /src // RUN: sirve para correr los comandos de linux. x ej, mkdir, cd, etc
+WORKDIR /src //cambia el work directory. es como hacer un cd /src pero ya me deja ese directorio por default para los demas comandos
+ADD . /src // agrega los archivos del primer parametro de mi pc al DIR del 2do parametro (container)
+RUN npm install
+//////////////////////////////////////////////////////////////////////////////
+Otros:
+RUN cd /var/www; npm install // con ; puedo correr muchos comandos a la vez
+
+Finalmente, para crear una imagen (child image) a partir de este Dockerfile:
+
+$ docker build -t jcarpanelli/nombre_imagen .
+
+
+===========================================================================
+===========================================================================
+
+NETWORKING & LINKING
+
+Puedo crear links en docker, y hacer que los containers se comuniquen meidante esos links
+
+1) levato un container con un nombre/alias
+$ docker run -d -p 5432:5432 jcarpanelli/database --name dbpostgres
+$ docker run -d -p 8080:8080 jcarpanelli/node-app --name webapp --link db:db node app.js
+y esto va a hacer que para el container webapp, el host db sea la base de datos.
+
+
+Puedo crear redes para docker (y asi comunicar mediante esta multiples microservicios), y hacer que los containers se comuniquen mediante esas redes.
+para ver las redes:
+$ docker network ls
+
+para crear una red:
+$ docker network create <network_name>
+
+para eliminar una red:
+$ docker network rm <network_name>
+
+para inspeccionar una network:
+
+$ docker network inspect <network_name>
+
+5==========================================================================
+===========================================================================
+
+Data persisting among containers:
+Por ejemplo, cuando tengo un container que va a correr solamente una base de datos (x ej postgresql) la idea es que me persista la data por mas que yo borre el container. 
+
+Data volumes: es un directorio que se inicializa en la creacion del container, y es un path al cual muchos containers pueden acceder. El volumen se crea en la computadora HOST, y lo exponemos adentro de un container pudiendo correr esa data en el container, asegurandonos persistencia en el HOST (pero pudiendo ser accedido por el container). Entonces, si el container se cae o lo tiramos abajo, la data no se pierde porque en verdad esta en un data volume en la computadora host.
+
+para montar un volumen, se usa el tag -v:
+
+$ docker run -it -v <nombre_volume:/mount_path <image_name | image_id>
+ejemplo:
+$ docker run -it -v newvolume0:/new_volume rails-app
+
+-v my/own/data/dir:/docker/dir
+
+que pasa aca? en el container se crea una carpeta que se llama "new_volume" que va a tener montado un volume (desde el host: /var/lib/docker/volumes) con los archivos que haya persistido.
+
+Ejemplo para postgres en 1 sola linea:
+
+docker run --name countit_db_dev_1 -itd --restart always --env 'DB_USER=postgres' --env 'DB_PASS=password' --env 'DB_NAME=countit-web_development' --net countit -p 5432:5432 sameersbn/postgresql
+
+https://github.com/sameersbn/docker-postgresql
+
+==========================================================================================
+==========================================================================================
+DOCKER COMPOSE:
+
+sirve para correr multi containers en los entornos de development, test y produccion (este ultimo en un swarm)
+Por ejemplo, si quisiera levantar una app de rails la idea seria tener 1 container con la aplicacion, otro container con la base de datos postgresql y otro container con redis.
+Para esto, en vez de tener instalado todo en un mismo container, se usa un container diferente para cada uno y despues se levanta y linkea todo con Docker Compose.
+
+Otro ejemplo: Arquitecturas de microservicios. La idea seria poder levantar todos los microservicios de una con docker compose (cada uno va a tener un container asociado) asi no hay que estar constantemente levantando cosas.
+
+Lo bueno que tiene compose es que levanta todos los servicios de una, y ademas los pone a todos en la misma docker network cosa de que se puedan comunicar entre si.
+
+Ejemplo de docker-compose.yml:
+
+version: '3' // version de compose que voy a correr. v3 es la ultima. mientras mas nueva es la version, mas opciones tengo
+services: //Defino containers
+  rdb: //container que se va a llamar rdb (--name rdb)
+    restart: always
+    image: sameersbn/postgresql // base image de la cual se va a hacer la imagen de postgres en este caso
+    ports:
+      - '5432:5432' //linkeo de puertos entre host y container
+    environment: // --env variables
+      - DB_USER=foobar
+      - DB_PASS=foobar123
+      - DB_NAME=countit-server_development
+    volumes: // -v en docker run. es para montar volumenes (persistencia). (VER PERSISTENCIA ARRIBA)
+      - /srv/docker/postgresql:/var/lib/postgresql
+  gateway_authorization: // container qe se va a llamar gateway_authorization
+    build: gateway-authorization // contexto del cual se va a buscar la child image (o sea el Dockerfile)
+    command: node app.js //comando a correr cuando se haga el docker run
+    ports:
+      - '8080:8080'
+  user_authentication:
+    container_name: usa_autha
+    build: 
+      context: ./user-authentication
+      args:
+        - buildnumber=1
+        - password=secret
+    command: rackup -p 4567 -o 0.0.0.0
+    depends_on: // este servicio depende de otro. en este caso, poniendo esto, compose entiende que tiene que primero buildear la imagen rdb antes que esta.
+      - rdb
+  rails_app:
+    build: countit-server
+    command: bundle exec rails s -p 3000 -b 0.0.0.0
+    depends_on //links:
+      - rdb
+
+Comandos de compose:
+
+$ docker-compose up -> buildea todas las imagenes (si no estan buildeadas) y las runnea, -d para correr detached
+$ docker-compose build <service_name> -> buildea por primera vez o bien vuelve a buildear el servicio.
+$ docker-compose stop -> stopea
+$ docker-compose ps -> muestra los procesos de compose corriendo
+$ docker-compose scale <service>=<replicas> -> escala un container (i.e., crea un container_2, container_3)
+  Si pongo un valor menor al de la cantidad de containers de una imagen que corren, entonces va a matar containers.
+  EJ: docker-compose scale ms_authorization=3
+
+
+DEPLOY CON COMPOSE + SWARM:
+La versión 3 de compose incorporó la propiedad "deploy" en el docker-compose.yml donde se pueden especificar subpropiedades del deploy para usar con swarm.
+
+version: '3'
+services:
+  rails_app:
+    image: rails/rails
+    container_name: old_rails_app
+    context: ./myapp
+    deploy:
+      mode: global(1 solo container en el swarm)/replicated(n replicas)
+      replicas: 6
+      resources: // recursos para ser usados por la imagen
+        limits:
+          cpus: '0.001'
+          memory: 50M
+        reservations:
+          cpus: '0.0001'
+          memory: 20M
+      update_config: 
+        parallelism: 2
+        delay: 10s
+      restart_policy: // como y cuando restartear containers cuando se caen (x ejemplo x error de código)
+        condition: on-failure | none | any (default)
+        delay: 5s
+        max_attempts: 3 // cuantas veces tratar de restarear el container antes de dejar de intentar (default: si no pongo max_attempts: n, intenta para siempre)
+        window: 120s // Tiempo de ventana para decidir si el restart fue un success o un fail
+
+==========================================================================================
+==========================================================================================
+
+DOCKER SWARM:
+
+Un swarm es un conjunto de maquinas que corren Docker (docker engines) y que son parte de un cluster. Puedo correr los comandos de docker que quiera, pero estos son ejecutados en un cluster por el SWARM MANAGER. Cada maquina del cluster se llama nodo.
+
+Features:
+1) Manejo de cluster integrado con docker engine: Se usa el docker engine cli para crear un swarm de docker engines, donde se pueden deployear servicios. No se necesita orquestacion entre los servicios de manera adicional
+2) Diseño descentralizado: La definición del rol de un ndo se hacen en tiempo de ejecucion. 
+3) Es declarativo. Se puede declarar de manera explicita el estado de los servicios.
+4) Escalamiento: Para cada servicio puedo declarar el numero de tareas que quiero correr. Puedo escalar para arriba o para abajo, ya que el swarm manager se adapta automaticamente agregando o eliminando las tareas.
+5) Reacondicionamiento del estado que yo quiero: si yo levante 10 replicas de un container y el worker que tenia 3 de esas replicas se cae, el manager va a crear esas 3 replicas para suplantar las que se cayeron en los workers que aun funcionan
+6) multi-host networking: se pueden especificar explicitamente las redes de mis servicios
+7) service discovery: el swarm manager asigna a cada servicio en el swarm un unico DNS name y hace loadbalancing entre os containers que estan corriendo. Cada container, al tener su DNS name unico, lo puedo consultar si yo quisiera.
+8) Load balancing: se pueden exponer los puertos para servicios a un load balancer externo. Internamente, swarm te deja especificar como distribuir los containers entre los nodos disponibles.
+9) Es seguro. cada nodo usa TLS para autenticar y encriptar la comunicacion entre un nodo y los demas.
+10) Rolling updates: se pueden actualizar containers (meidante cambios en sus imagenes asociadas) de manera acil. el swarm manager permite controlar el delay entre el deploy de cada servicio en cada nodo. si algo anda mal, se puede hacer un rollback.
+
+
+CONCEPTOS:
+entonces, un swarm es un cluster de docker engines o nodos (ya que los nodos corren docker engines). Estos nodos pueden ser virtuales, por ejemplo, ec2 instances de AWS o maquinas virtuales en mi laptop usando virtualbox. También cada nodo pueden ser pcs fisicas.
+Estos nodos son donde yo deployeo mis services.
+
+Stack: grupo de servicios
+
+Hay dos tipos de nodos:
+Manager nodes:
+  son los encargados de la orquestación entre servicios, y de controlar las funciones del cluster para mantener el estado deseado del cluster (cantidad de replicas de cada servicio, etc). 
+  lo ideal es unar un numero impar de manager nodes, dependiendo del caso de uso. un N manager cluster va a bancar (N-1)/2 manager nodes caidos. Es decir, que si tengo 3 node managers, swarm tolera que se caiga 1. Si tengo 5 nodos, tolera 5-1/2 = 2 nodos caidos. Esto hace que si tengo un numero impar de nodos >= a 3, no tenga un SPOF porque hay otros manager nodes que estan funcionando.
+NOTA: + manager nodes no implica + performance. Todo lo contrario.
+
+Worker nodes: Reciben y ejecutan TASKS que son enviadas desde manager nodes. Por default un manager node es un worker node el cual tiene la funcionalidad adicional de ser un manager node, pero se puede especificar que un manager node solo haga tareas de manager. Cuando un Manager node le da una task al worker, el worker la ejecuta y reporta su estado actual de la tarea encomendada para que el manager pueda mantener el estado deseado de cada worker.
+NOTA: + worker nodes significa mas scalability.
+
+Services y tasks:
+Un service es lo que venimos viendo desde antes: es por ejemplo el microservicio de node que corremos en un container asociado a una child image que hayamos creado para correr (por ejemplo, un service es user_authentication en countit services).
+
+Hay 2 formas de correr servicios:
+1) Replicated services: el swarm manager distribuye un numero especifico de tasks replicas (que yo puedo setear) a los nodos que yo setee.
+2) global services: Swarm corre una task de cada servicio en cada nodo del cluster.
+
+
+========================================================
+========================================================
+Docker swarm commands:
+
+$ docker swarm init
+Inicia un swarm, y devuelve un token para poner conectarme:
+  docker swarm join \
+  --token SWMTKN-1-5a7sg2ttu8enn59qz6ppo6cg6nns78kfsgrqqpgkvrnwmirxv3-bkbuxx26shgtk3pc3ldog4prq \
+  192.168.1.104:2377
+
+$ docker service ps // Lista todos los servicios
+
+$ docker stack deploy --compose-file docker-stack.yml countitservices
+es: $ docker stack deploy --compose-file <nombre_compose_file> <nombre_app>
+hace del deploy en swarm según lo especificado en el docker-stack.yml. el nombre_app que especifique va a estar delante del nombre de todos los containers que se levanten, ej:
+countitservices_rails_app
+countitservices_rdb
+
+También redeployea. Es decir, si hice algun cambio en alguna imagen o bien en la configuracion de ese servicio mediante el compose.yml, el comando actualiza al nuevo estado del server.
+
+$ docker service ls => devuelve todos los servicios que estan corriendo en el swarm, y cuantos cntainers de cada uno.
+
+$ docker service ps <service_name> => devuelve el estado de todas las instancias(containers) de ese servicio. en que maquina del cluster estan corriendo, que container Id tienen, etc.
+ej: $ docker service ps cs_vehicles_creation
+
+$ docker service scale <service_name> = N => escala el servicio elegido creando replicas de este en los nodos que swarm crea correcto. 
+ej: $ docke service scale cs_vehicles_creation=10
+
+$ docker service rm <service_name> => elimina el servicio del swarm y todos sus containers
+ej: $ dcker service rm cs_vehicles_creation
+
+$ docker service update <service> -> updatea el servicio 
+
+$ docker service inspect <service> => devuelve toda la info de ese servicio
+
+--------------------------------
+
+Informacion de nodos:
+
+docker node inspect, ls, ps, rm, update.
