@@ -17,10 +17,13 @@ jobs:
           command: ls
       - run:
           name: Got to package
-          command: cd packages/test
+          command: cd test
       - run:
           name: Verify if I be inside of correct folder
           command: pwd
+      - run:
+          name: list place is test
+          command: ls
       - run:
           name: Create package
           command: dpkg --build deb
