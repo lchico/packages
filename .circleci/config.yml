@@ -15,6 +15,6 @@ jobs:
       - run:
           name: list place
           command: ls
-     - run:
+      - run:
           name: Create package
           command: dpkg --build test/deb
