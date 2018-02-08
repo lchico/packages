@@ -9,6 +9,8 @@ jobs:
       - run:
           name: Greeting
           command: echo Hello, world.
+          command: ls 
+          command: pwd
       - run:
           name: Go correct folder
           command: cd test
