@@ -4,15 +4,14 @@ jobs:
     working_directory: ~/tmp
     docker:
       - image: circleci/node
-    tag: /release-.*/
-
+    tags:
+      only:
+        - tests
     steps:
-      - checkout
-      - run:
-          name: Geting version patch
-          command: echo Version patch ${CIRCLE_TAG}
-      - run:
-          name: Create package
-          command: dpkg --build patch_${CIRCLE_TAG}/deb
-
-          
+     - checkout
+     - run:
+         name: Geting version patch
+         command: echo Version patch ${CIRCLE_TAG}
+     - run:
+         name: Create package
+         command: dpkg --build patch_${CIRCLE_TAG}/deb
