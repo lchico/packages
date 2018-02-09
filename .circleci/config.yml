@@ -7,14 +7,21 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Greeting
-          command: echo Hello, world.
+          name: Install aws dependencies
+          command: sudo apt-get install git
       - run:
-          name: PWD
-          command: pwd
-      - run:
-          name: list place
-          command: ls
+          name: Geting version patch
+          command: echo Version patch ${CIRCLE_TAG}
       - run:
           name: Create package
-          command: dpkg --build test/deb
+          command: dpkg --build patch_${CIRCLE_TAG}/deb
+
+workflows:
+  version: 2
+  build_package:
+    jobs:
+      - build:
+          filters:
+            tags:
+              only: /.*/
+

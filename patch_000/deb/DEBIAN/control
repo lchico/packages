@@ -1,0 +1,9 @@
+Package: hello-world
+Version: 0.0
+Architecture: armhf
+Maintainer: Luis Chico <lchico@countit.com.ar>
+Installed-Size: 216
+Suggests: 
+Section: custom
+Priority: optional
+Description: Testing
