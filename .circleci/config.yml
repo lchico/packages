@@ -4,11 +4,10 @@ jobs:
     working_directory: ~/tmp
     docker:
       - image: circleci/node
+    tag: /release-.*/
+
     steps:
       - checkout
-      - run:
-          name: Install aws dependencies
-          command: sudo apt-get install git
       - run:
           name: Geting version patch
           command: echo Version patch ${CIRCLE_TAG}
@@ -16,12 +15,4 @@ jobs:
           name: Create package
           command: dpkg --build patch_${CIRCLE_TAG}/deb
 
-workflows:
-  version: 2
-  build_package:
-    jobs:
-      - build:
-          filters:
-            tags:
-              only: /.*/
-
+          
