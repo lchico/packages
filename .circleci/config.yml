@@ -10,8 +10,24 @@ jobs:
     steps:
      - checkout
      - run:
-         name: Geting version patch
-         command: echo Version patch ${CIRCLE_TAG}
+         name: Detect the new package
+         command: |
+           echo "export parche=$(ls -dt */ |head -n1)" >> $BASH_ENV
      - run:
-         name: Create package
-         command: dpkg --build patch_${CIRCLE_TAG}/deb
+         name: Create new package
+         command: |
+           echo "Parche select: ${parche}"
+           dpkg --build ${parche}deb
+     - run:
+         name: Check Package information 
+         command: dpkg --info ${parche}deb.deb
+     - run:
+         name: Post package as release or testing 
+         command: |
+           echo "Its a releas? patch ${CIRCLE_TAG}"
+           if [ "${CIRCLE_TAG}" == "" ]; then
+              echo "NO"
+              cat ${parche}deb.deb|gzip|curl -X PUT --upload-file "-" https://transfer.sh/parche.gz
+           else
+              echo "Si. Version: ${CIRCLE_TAG} release"
+           fi
